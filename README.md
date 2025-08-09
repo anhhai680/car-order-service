@@ -1,35 +1,103 @@
 # Order Service
 
-This service manages the car purchase transaction process.
+Service for managing purchase orders for cars. Currently uses in-memory storage.
 
 ## Tech Stack
-- .NET 8 Web API
-- PostgreSQL (or MySQL)
-- RabbitMQ (for event communication)
+- .NET 7 Web API
+- RabbitMQ (planned for events)
+- Swagger/OpenAPI
+- Database: In-memory for now (PostgreSQL planned)
+
+## Local URLs
+- HTTP: `http://localhost:5068`
+- HTTPS: `https://localhost:7291`
+- Swagger UI: `/swagger`
 
 ## Features
-- Create order when a user clicks "Buy Car"
-- Verify car status with car-listing-service (TODO)
-- Communicate with payment gateway (mock)
+- Create order when user clicks Buy
 - Update order status: pending, paid, cancelled
-- Emits events: `order-created`, `order-paid` (TODO)
-- Communicates with notification-service
+- Track timestamps and amount
+- Planned events: `order-created`, `order-paid`
+- Will communicate with car-listing-service and notification-service
+
+## Requirements
+- .NET 7 SDK
+
+## Configuration
+- No database configuration yet (in-memory). Future: PostgreSQL via connection string.
+- Environment: `ASPNETCORE_ENVIRONMENT=Development` (profiles set this).
 
 ## Getting Started
-1. Install .NET 8 SDK
-2. Configure your database (PostgreSQL or MySQL) in `appsettings.json` (not yet implemented, currently in-memory)
-3. Configure RabbitMQ connection in `appsettings.json` (TODO)
-4. Run the service:
-   ```bash
-   dotnet run
-   ```
+```bash
+dotnet restore
+dotnet run
+```
+
+Open Swagger at `http://localhost:5068/swagger`.
+
+## Data Model
+`Order` DTO shape:
+
+```json
+{
+  "id": "guid",
+  "carId": "string",
+  "buyerId": "string",
+  "status": "pending | paid | cancelled",
+  "createdAt": "2024-01-01T00:00:00Z",
+  "paidAt": "2024-01-02T00:00:00Z or null",
+  "amount": 19999.99
+}
+```
 
 ## API Endpoints
-- `GET /Order` - Get all orders
-- `GET /Order/{id}` - Get order by id
-- `POST /Order` - Create a new order
-- `PUT /Order/{id}/status` - Update order status
-- `DELETE /Order/{id}` - Delete an order
+Base route: `/Order`
 
-## API Documentation
-Swagger UI available at `/swagger` when running locally. 
+- `GET /Order` — Get all orders
+- `GET /Order/{id}` — Get an order by id (Guid)
+- `POST /Order` — Create a new order
+- `PUT /Order/{id}/status` — Update order status (body is a JSON string)
+- `DELETE /Order/{id}` — Delete an order by id
+
+### Request/Response Examples
+
+Create:
+```bash
+curl -X POST http://localhost:5068/Order \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "carId": "6567f1c2e9...",
+    "buyerId": "user-123",
+    "amount": 19999.99
+  }'
+```
+
+Get by id:
+```bash
+curl http://localhost:5068/Order/<guid>
+```
+
+Update status (note: body is a JSON string):
+```bash
+curl -X PUT http://localhost:5068/Order/<guid>/status \
+  -H 'Content-Type: application/json' \
+  -d '"paid"'
+```
+
+Delete:
+```bash
+curl -X DELETE http://localhost:5068/Order/<guid>
+```
+
+## Swagger
+Interactive docs at `http://localhost:5068/swagger`.
+
+## Notes & Future Work
+- Verify car status with car-listing-service before creating orders
+- Publish `order-created` and `order-paid` events to RabbitMQ
+- Persist orders in PostgreSQL
+- Add authentication/authorization and request validation
+
+## Troubleshooting
+- 404s: confirm you are using `/Order` (capital O) and the correct Guid format
+- Swagger not loading: ensure the app is running and you are using the HTTP port above
